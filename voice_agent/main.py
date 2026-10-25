@@ -44,7 +44,9 @@ class MaliniVoiceAgent(Agent):
 
 
 
-server = AgentServer()
+server = AgentServer(
+    job_executor_type=agents.JobExecutorType.THREAD,
+)
 
 
 @server.rtc_session()
@@ -59,8 +61,8 @@ async def entrypoint(ctx: agents.JobContext):
             turn_detection=inference.TurnDetector(),
             endpointing={
                 "mode": "fixed",
-                "min_delay": 0.5,
-                "max_delay": 6.0,
+                "min_delay": 0.4,
+                "max_delay": 1.5,
             },
         ),
     )
@@ -68,7 +70,8 @@ async def entrypoint(ctx: agents.JobContext):
     await session.start(agent=MaliniVoiceAgent(), room=ctx.room)
 
     await session.generate_reply(
-        user_input="Greet the guest with the warmth of Assamese hospitality as Malini Voice from Malini Homes Guwahati. Ask how you can help them with their homestay booking or stay inquiry today."
+        instructions="Greet the guest with the legendary warmth of Assamese hospitality as Malini Voice from Malini Homes Guwahati. Keep it short (one sentence) and ask how you can help them today.",
+        allow_interruptions=False,
     )
 
 
