@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <strong>An autonomous, ultra-low-latency real-time voice concierge designed for Malini Homes — a government-registered homestay brand in Guwahati, Assam.</strong>
+  <strong>A real-time voice concierge designed for Malini Homes — a government-registered homestay brand in Guwahati, Assam.</strong>
 </p>
 
 ---
@@ -44,14 +44,14 @@ Planning homestay visits in Assam should feel as warm and seamless as Assamese h
 - Distance and transit guidance to iconic Guwahati landmarks (Kamakhya Temple, Brahmaputra River Cruises, Sualkuchi, Pobitora).
 - Reservation requests and urgent human host escalations.
 
-**Malini Voice** solves this by delivering an end-to-end, ultra-low-latency voice experience. Guests speak naturally over a WebRTC audio channel and receive instant, warm, grounded spoken responses.
+**Malini Voice** solves this by delivering an end-to-end, low-latency voice experience. Guests speak naturally over a WebRTC audio channel and receive instant, warm, grounded spoken responses.
 
 ---
 
 ## ✨ Key Highlights & Capabilities
 
-- ⚡ **Sub-Second Voice Streaming**: Powered by LiveKit Agents over WebRTC, providing immediate conversational turn-taking without awkward delays.
-- 🎯 **Hallucination-Free RAG**: Indexes verified property documentation, policies, and tourism itineraries using **Docling** and **Qdrant** vector search.
+- ⚡ **Real-Time Voice Streaming**: Powered by LiveKit Agents over WebRTC, with streaming STT/TTS and natural conversational turn-taking.
+- 🎯 **Grounded RAG**: Indexes verified property documentation, policies, and tourism itineraries using **Docling** and **Qdrant** vector search.
 - 🧮 **Accurate Stay Quotes (₹)**: Built-in calculation engine dynamically computes quotes in Indian Rupees based on property unit, nights, and guest headcount.
 - 🎫 **Automated Inquiry Logging**: Collects guest names, dates, and contact details to generate unique reservation inquiry tickets (`MALINI-XXXXX`).
 - 🤝 **Human Host Escalation**: Smoothly escalates complex booking requests directly to human hosts via WhatsApp or direct phone contact (`+91 8011110315`).
@@ -108,7 +108,7 @@ Malini Voice incorporates a custom **`SpeechOnlyGraph`** wrapper that intercepts
 Property PDF manuals are parsed and structured with **Docling**, embedded using `sentence-transformers` (`all-MiniLM-L6-v2`), and indexed into a local **Qdrant** vector store with rich semantic metadata.
 
 ### 4. High-Throughput Reasoning (Groq)
-Powered by Groq's low-latency inference engine running **Llama 3.3 70B Versatile**, allowing instant tool selection and natural conversational responses.
+Powered by Groq's low-latency inference engine running **Llama 3.3 70B Versatile**, allowing fast tool selection and natural conversational responses.
 
 ---
 
@@ -237,7 +237,7 @@ malini-homes-voice-agent/
 Developed by **Sandhya Banti Dutta Borah**  
 *Building real-world AI agents, multi-modal voice interfaces, and intelligent systems.*
 
-- 💼 **LinkedIn**: [Connect on LinkedIn](https://www.linkedin.com/in/sandhya-banti-dutta-borah)
+- 💼 **LinkedIn**: [Connect on LinkedIn](https://www.linkedin.com/in/sandhyabdborah3/)
 - 🐙 **GitHub**: [@sandhya-bdb](https://github.com/sandhya-bdb)
 
 ---
