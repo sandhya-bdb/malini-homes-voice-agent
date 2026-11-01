@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     tts_model: str = "inworld/inworld-tts-2"
     tts_voice: str = "Ashley"
 
+    # Lead capture (booking inquiries & escalations)
+    leads_csv_path: str = "./data/leads.csv"
+    google_sheet_id: str = ""
+    google_service_account_file: str = ""
+
 
 settings = Settings()
 

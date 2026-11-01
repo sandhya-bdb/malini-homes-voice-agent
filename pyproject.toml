@@ -30,6 +30,9 @@ dependencies = [
     "python-dotenv",
     "pydantic-settings",
     "reportlab",
+
+    # Lead capture to Google Sheets (optional at runtime)
+    "gspread",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -53,7 +53,7 @@ Planning homestay visits in Assam should feel as warm and seamless as Assamese h
 - ⚡ **Real-Time Voice Streaming**: Powered by LiveKit Agents over WebRTC, with streaming STT/TTS and natural conversational turn-taking.
 - 🎯 **Grounded RAG**: Indexes verified property documentation, policies, and tourism itineraries using **Docling** and **Qdrant** vector search.
 - 🧮 **Accurate Stay Quotes (₹)**: Built-in calculation engine dynamically computes quotes in Indian Rupees based on property unit, nights, and guest headcount.
-- 🎫 **Automated Inquiry Logging**: Collects guest names, dates, and contact details to generate unique reservation inquiry tickets (`MALINI-XXXXX`).
+- 🎫 **Lead Capture, Host Confirms**: Collects guest name, phone, property and dates, saves them to a Google Sheet (and a local CSV backup) with a reference number (`MALINI-XXXXX`). The agent never claims a room is free; the host confirms dates and calls back.
 - 🤝 **Human Host Escalation**: Smoothly escalates complex booking requests directly to human hosts via WhatsApp or direct phone contact (`+91 8011110315`).
 - 🌺 **Cultural Warmth**: Embeds genuine Assamese hospitality (*"Atithi Devo Bhava"*) and deep local city knowledge.
 
@@ -120,7 +120,7 @@ Powered by Groq's low-latency inference engine running **Llama 3.3 70B Versatile
 | *"How much would the full 2BHK in Silpukhuri cost for 3 nights for 4 guests?"* | Invokes `calculate_stay_quote` tool with exact pricing logic. | *"For the full 2BHK at Silpukhuri across 3 nights for 4 guests, your total stay quote comes to ₹10,500. Would you like me to note down your booking details?"* |
 | *"I'm visiting Guwahati for medical checkups with my dog. Any recommendations?"* | Performs RAG lookup over property policies. | *"Our Bhangagarh property is ideal for you! It is located right by GMCH, features lift access, offers home-cooked meals, and is pet-friendly."* |
 | *"How far is Kamakhya Temple from Silpukhuri?"* | Retrieves travel distances and local transit advice. | *"Kamakhya Temple is approximately 8 km from our Silpukhuri unit. It typically takes around 25 to 30 minutes by taxi. We recommend visiting early morning to avoid the rush."* |
-| *"Please book Silpukhuri for next weekend. My number is 9876543210."* | Executes `create_booking_inquiry` tool and logs ticket. | *"I've logged your reservation inquiry under ticket MALINI-84210! Our host will reach out to you on 9876543210 to confirm your dates."* |
+| *"Please book Silpukhuri for next weekend. My number is 9876543210."* | Executes `create_booking_inquiry`, saves the lead to the Google Sheet. | *"I've logged your reservation inquiry under ticket MALINI-84210! Our host will reach out to you on 9876543210 to confirm your dates."* |
 
 ---
 
@@ -158,6 +158,19 @@ Powered by Groq's low-latency inference engine running **Llama 3.3 70B Versatile
    LIVEKIT_API_SECRET=your_livekit_api_secret
    GROQ_API_KEY=gsk_your_groq_api_key
    ```
+
+### Optional: Send Inquiries to a Google Sheet
+Every booking inquiry and escalation is always saved to `data/leads.csv`. To have them land in a Google Sheet the hosts can check on their phone:
+
+1. In Google Cloud, enable the Google Sheets API and create a service account. Download its JSON key to `.credentials/service-account.json` (already gitignored).
+2. Create a Google Sheet and share it with the service account's email as Editor.
+3. Add to `.env`:
+   ```ini
+   GOOGLE_SHEET_ID=the_id_from_the_sheet_url
+   GOOGLE_SERVICE_ACCOUNT_FILE=.credentials/service-account.json
+   ```
+
+The header row is created automatically. Hosts can update the `status` column (NEW, CONTACTED, CONFIRMED) as they work through leads.
 
 ### Ingesting the Knowledge Base
 To compile the homestay documentation and index it into the local Qdrant vector database:
@@ -215,8 +228,9 @@ malini-homes-voice-agent/
 │   └── malini-guwahati-guide-and-experiences.pdf
 ├── langchain_agent/          # Core reasoning & agentic engine
 │   ├── __init__.py
+│   ├── leads.py              # Saves inquiries to Google Sheet + CSV backup
 │   ├── rag.py                # Semantic vector search & context builder
-│   └── tools.py              # Domain tools (quotes, availability, ticketing)
+│   └── tools.py              # Domain tools (room options, quotes, lead capture)
 └── voice_agent/              # LiveKit WebRTC audio pipeline
     ├── __init__.py
     └── main.py               # Deepgram STT + Inworld TTS + SpeechOnlyGraph

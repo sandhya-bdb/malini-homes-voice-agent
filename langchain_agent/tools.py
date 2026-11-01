@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 
 from langchain.agents import create_agent
 from langchain_core.tools import tool
@@ -8,6 +7,7 @@ from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
 from config import settings
+from langchain_agent.leads import save_lead
 from langchain_agent.rag import retrieve, build_context
 
 
@@ -148,9 +148,10 @@ def search_homestay_info(query: str) -> str:
 
 
 @tool
-def check_property_availability(property_name: str, guests: int = 2) -> str:
-    """Check accommodation options and capacity for a given Malini Homes property.
-    Supported properties: 'silpukhuri', 'zoo road', or 'bhangagarh'."""
+def get_room_options(property_name: str, guests: int = 2) -> str:
+    """List the room types, nightly rates and capacity at a Malini Homes property.
+    This does NOT check whether rooms are free on specific dates; date availability
+    is always confirmed by the host. Supported properties: 'silpukhuri', 'zoo road', or 'bhangagarh'."""
     key = property_name.lower().replace(" ", "").replace("-", "")
 
     matched_key = None
@@ -173,9 +174,10 @@ def check_property_availability(property_name: str, guests: int = 2) -> str:
 
     rooms_str = "; ".join(room_list)
     return (
-        f"{prop['name']} has availability for {guests} guest(s). "
-        f"Available options: {rooms_str}. "
-        f"Address: {prop['address']}."
+        f"Room options at {prop['name']} for {guests} guest(s): {rooms_str}. "
+        f"Address: {prop['address']}. "
+        "Note: availability for specific dates is not known here. If the guest has dates in mind, "
+        "offer to take their name and phone number so the host can confirm availability."
     )
 
 
@@ -261,35 +263,63 @@ def get_property_details(property_name: str) -> str:
 
 
 @tool
-def create_booking_inquiry(guest_name: str, phone_number: str, property_name: str, details_or_dates: str) -> str:
-    """Create a reservation or inquiry ticket when a guest wants to book or connect with the host.
-    Requires guest name, 10-digit Indian phone number, preferred property, and dates/details."""
+def create_booking_inquiry(
+    guest_name: str,
+    phone_number: str,
+    property_name: str,
+    check_in: str = "",
+    check_out: str = "",
+    guests: int = 0,
+    notes: str = "",
+) -> str:
+    """Save a booking inquiry so the host can confirm availability and call the guest back.
+    Use when a guest wants to book, asks about specific dates, or wants a callback.
+    Requires guest name, 10-digit Indian phone number and preferred property.
+    check_in / check_out: dates exactly as the guest said them (e.g. '14 Nov', 'next Friday').
+    notes: room preference, purpose of visit, pets, meals or any other request."""
     phone_clean = phone_number.strip().replace("+91", "").replace("-", "").replace(" ", "")
+    digits = "".join(ch for ch in phone_clean if ch.isdigit())
+    if len(digits) != 10:
+        return (
+            "The phone number doesn't look like a 10-digit Indian mobile number. "
+            "Politely ask the guest to repeat it slowly."
+        )
 
-    ticket_id = "MALINI-" + str(abs(hash(phone_clean + guest_name + datetime.now().isoformat())) % 100000).zfill(5)
-    timestamp = datetime.now().isoformat()
-
-    print(f"[BOOKING INQUIRY] ID={ticket_id} time={timestamp} guest={guest_name} phone={phone_clean} prop={property_name} notes={details_or_dates}")
+    ticket_id = save_lead(
+        "BOOKING_INQUIRY",
+        guest_name=guest_name,
+        phone=digits,
+        property=property_name,
+        check_in=check_in,
+        check_out=check_out,
+        guests=str(guests or ""),
+        notes=notes,
+    )
 
     return (
-        f"Thank you, {guest_name}! I have registered your booking inquiry with reference ID {ticket_id} "
-        f"for {property_name}. Our host team will connect with you via WhatsApp or call on {phone_clean} shortly."
+        f"Inquiry saved with reference {ticket_id} for {guest_name} at {property_name}. "
+        f"Tell the guest the host will check availability and contact them on WhatsApp or call at {digits} "
+        "to confirm. Do not say the booking is confirmed."
     )
 
 
 @tool
-def escalate_to_host(reason: str) -> str:
-    """Escalate to a human host representative for custom requests, long-term medical stay discounts,
-    group bookings, or urgent assistance."""
-    ticket_id = "MALINI-" + str(abs(hash(reason)) % 100000).zfill(5)
-    timestamp = datetime.now().isoformat()
+def escalate_to_host(reason: str, guest_name: str = "", phone_number: str = "") -> str:
+    """Escalate to a human host for custom requests, long-term medical stay discounts,
+    group bookings, or urgent assistance. Ask for the guest's name and phone number first
+    so the host can reach them."""
+    digits = "".join(ch for ch in phone_number if ch.isdigit())[-10:]
+    ticket_id = save_lead(
+        "ESCALATION",
+        guest_name=guest_name,
+        phone=digits,
+        notes=reason,
+    )
 
-    print(f"[ESCALATION] ID={ticket_id} time={timestamp} reason={reason!r}")
-
+    contact_hint = f" on {digits}" if digits else ". The guest can also call or WhatsApp +91 8011110315"
     return (
-        f"I've logged request {ticket_id} for our host team. "
-        f"A representative will reach out to you within 30 minutes. "
-        f"Your reference number is {ticket_id}."
+        f"Escalation saved with reference {ticket_id}. "
+        f"Tell the guest our host team will reach out shortly{contact_hint}."
     )
 
 
@@ -309,10 +339,13 @@ SYSTEM_PROMPT = (
     "\n"
     "GUIDELINES:\n"
     "- Use search_homestay_info for questions about house rules, check-in (1 PM), check-out (11 AM), ID requirements, nearby temples (Kamakhya), Brahmaputra cruises, and amenities.\n"
-    "- Use check_property_availability when guests ask which property or room is available.\n"
+    "- Use get_room_options to describe rooms, rates and capacity at a property.\n"
+    "- You CANNOT see which dates are booked. Never tell a guest a room is free or that a booking is confirmed. "
+    "When they ask about dates, offer to take their name and phone number so the host can confirm.\n"
     "- Use calculate_stay_quote to give clear price breakdowns in Indian Rupees (₹).\n"
     "- Use get_property_details for addresses, landmarks, and contact numbers.\n"
-    "- Use create_booking_inquiry when a guest wants to book or leave their contact details.\n"
+    "- Use create_booking_inquiry when a guest wants to book, asks about specific dates, or wants a callback. "
+    "Collect name, 10-digit phone number, property, dates and number of guests, then read back the reference number.\n"
     "- Use escalate_to_host for special medical discounts, long stays, or urgent host support.\n"
     "\n"
     "VOICE TONE & CONSTRAINTS:\n"
@@ -330,7 +363,7 @@ SYSTEM_PROMPT = (
 
 ALL_TOOLS = [
     search_homestay_info,
-    check_property_availability,
+    get_room_options,
     calculate_stay_quote,
     get_property_details,
     create_booking_inquiry,
